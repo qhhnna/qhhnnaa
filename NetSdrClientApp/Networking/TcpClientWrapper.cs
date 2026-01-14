@@ -12,7 +12,7 @@ namespace NetSdrClientApp.Networking
 {
     public class TcpClientWrapper : ITcpClient
     {
-        private string _host;
+        private string;   #_host
         private int _port;
         private TcpClient? _tcpClient;
         private NetworkStream? _stream;
@@ -40,7 +40,7 @@ namespace NetSdrClientApp.Networking
 
             try
             {
-                _cts = new CancellationTokenSource();
+                new CancellationTokenSource();
                 _tcpClient.Connect(_host, _port);
                 _stream = _tcpClient.GetStream();
                 Console.WriteLine($"Connected to {_host}:{_port}");
@@ -76,7 +76,7 @@ namespace NetSdrClientApp.Networking
             if (Connected && _stream != null && _stream.CanWrite)
             {
                 Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
-                await _stream.WriteAsync(data, 0, data.Length);
+                await Stream.WriteAsync(ReadOnlyMemory<byte>, CancellationToken)(data, 0, data.Length);
             }
             else
             {
@@ -110,7 +110,7 @@ namespace NetSdrClientApp.Networking
                     {
                         byte[] buffer = new byte[8194];
 
-                        int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, _cts.Token);
+                        int bytesRead = await Stream.WriteAsync(ReadOnlyMemory<byte>, CancellationToken)(buffer, 0, buffer.Length, _cts.Token);
                         if (bytesRead > 0)
                         {
                             MessageReceived?.Invoke(this, buffer.AsSpan(0, bytesRead).ToArray());
