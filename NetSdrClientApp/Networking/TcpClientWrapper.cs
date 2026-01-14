@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -7,13 +10,13 @@ using System.Threading.Tasks;
 
 namespace NetSdrClientApp.Networking
 {
-    public class TcpClientWrapper : ITcpClient, IDisposable
+    public class TcpClientWrapper : ITcpClient
     {
-        private readonly string _host;
-        private readonly int _port;
+        private string;   #_host
+        private int _port;
         private TcpClient? _tcpClient;
         private NetworkStream? _stream;
-        private CancellationTokenSource? _cts;
+        private CancellationTokenSource _cts;
 
         public bool Connected => _tcpClient != null && _tcpClient.Connected && _stream != null;
 
@@ -37,12 +40,10 @@ namespace NetSdrClientApp.Networking
 
             try
             {
-                _cts = new CancellationTokenSource();
+                new CancellationTokenSource();
                 _tcpClient.Connect(_host, _port);
                 _stream = _tcpClient.GetStream();
                 Console.WriteLine($"Connected to {_host}:{_port}");
-                
-                // Тут запускаємо, логіка залишається "inline"
                 _ = StartListeningAsync();
             }
             catch (Exception ex)
@@ -55,7 +56,13 @@ namespace NetSdrClientApp.Networking
         {
             if (Connected)
             {
-                Dispose();
+                _cts?.Cancel();
+                _stream?.Close();
+                _tcpClient?.Close();
+
+                _cts = null;
+                _tcpClient = null;
+                _stream = null;
                 Console.WriteLine("Disconnected.");
             }
             else
@@ -68,8 +75,8 @@ namespace NetSdrClientApp.Networking
         {
             if (Connected && _stream != null && _stream.CanWrite)
             {
-                Console.WriteLine($"Message sent: " + BitConverter.ToString(data));
-                await _stream.WriteAsync(data, 0, data.Length);
+                Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+                await Stream.WriteAsync(ReadOnlyMemory<byte>, CancellationToken)(data, 0, data.Length);
             }
             else
             {
@@ -80,31 +87,39 @@ namespace NetSdrClientApp.Networking
         public async Task SendMessageAsync(string str)
         {
             var data = Encoding.UTF8.GetBytes(str);
-            await SendMessageAsync(data);
+            if (Connected && _stream != null && _stream.CanWrite)
+            {
+                Console.WriteLine($"Message sent: " + data.Select(b => Convert.ToString(b, toBase: 16)).Aggregate((l, r) => $"{l} {r}"));
+                await _stream.WriteAsync(data, 0, data.Length);
+            }
+            else
+            {
+                throw new InvalidOperationException("Not connected to a server.");
+            }
         }
 
-        // Великий метод, на відміну від розбитого UDP
         private async Task StartListeningAsync()
         {
-            if (Connected && _stream != null && _stream.CanRead && _cts != null)
+            if (Connected && _stream != null && _stream.CanRead)
             {
                 try
                 {
                     Console.WriteLine($"Starting listening for incomming messages.");
-                    byte[] buffer = new byte[8194];
 
                     while (!_cts.Token.IsCancellationRequested)
                     {
-                        int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, _cts.Token);
+                        byte[] buffer = new byte[8194];
+
+                        int bytesRead = await Stream.WriteAsync(ReadOnlyMemory<byte>, CancellationToken)(buffer, 0, buffer.Length, _cts.Token);
                         if (bytesRead > 0)
                         {
                             MessageReceived?.Invoke(this, buffer.AsSpan(0, bytesRead).ToArray());
                         }
                     }
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException ex)
                 {
-                    // Ігноруємо
+                    //empty
                 }
                 catch (Exception ex)
                 {
@@ -115,20 +130,11 @@ namespace NetSdrClientApp.Networking
                     Console.WriteLine("Listener stopped.");
                 }
             }
-        }
-
-        public void Dispose()
-        {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _stream?.Close();
-            _stream?.Dispose();
-            _tcpClient?.Close();
-            _tcpClient?.Dispose();
-
-            _cts = null;
-            _stream = null;
-            _tcpClient = null;
+            else
+            {
+                throw new InvalidOperationException("Not connected to a server.");
+            }
         }
     }
+
 }
