@@ -76,7 +76,7 @@ jobs:
       #      /p:CollectCoverage=true `
       #      /p:CoverletOutput=TestResults/coverage.xml `
       #      /p:CoverletOutputFormat=opencover
-      #  shell: pwsh
+      #  shell: pwsh 
       # 3) END: SonarScanner
       - name: SonarScanner End
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
